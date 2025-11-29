@@ -35,7 +35,7 @@ export const Profile: React.FC = () => {
     <div className="max-w-4xl mx-auto pb-10">
       {/* Cover Image */}
       <div className="h-48 w-full bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl mb-16 relative shadow-md">
-        <button className="absolute bottom-4 right-4 bg-black/30 hover:bg-black/50 text-white p-2 rounded-lg text-sm backdrop-blur-sm transition-colors flex items-center gap-2">
+        <button className="absolute bottom-4 left-4 sm:right-4 sm:left-auto bg-black/30 hover:bg-black/50 text-white p-2 rounded-lg text-sm backdrop-blur-sm transition-colors flex items-center gap-2">
           <Camera size={16} /> Change Cover
         </button>
       </div>

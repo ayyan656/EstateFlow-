@@ -4,7 +4,8 @@ import { PropertyCard } from '../components/PropertyCard';
 import { Button } from '../components/ui/Button';
 import { Input, Select } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-import { Plus, Search, Sparkles, X, Save, Upload, Image as ImageIcon, Trash2, AlertTriangle } from 'lucide-react';
+import { Card } from '../components/ui/Card';
+import { Plus, Search, Sparkles, X, Save, Upload, Image as ImageIcon, Trash2, AlertTriangle, Filter, RotateCcw } from 'lucide-react';
 import { generatePropertyDescription } from '../services/geminiService';
 
 // Mock Data
@@ -61,6 +62,19 @@ const MOCK_PROPERTIES: Property[] = [
     status: PropertyStatus.Draft,
     description: 'A quiet retreat in the woods.'
   },
+  {
+    id: '5',
+    title: 'Commercial Office Space',
+    address: '500 Business Park, Tech Valley',
+    price: 2100000,
+    image: 'https://picsum.photos/400/300?random=5',
+    beds: 0,
+    baths: 4,
+    sqft: 5000,
+    type: PropertyType.Commercial,
+    status: PropertyStatus.Active,
+    description: 'Prime location for a startup HQ.'
+  },
 ];
 
 const INITIAL_FORM_STATE = {
@@ -71,6 +85,7 @@ const INITIAL_FORM_STATE = {
   baths: '',
   sqft: '',
   status: PropertyStatus.Active,
+  type: PropertyType.House,
   specs: '', // For AI context
   vibe: '', // For AI context
   description: '',
@@ -79,9 +94,17 @@ const INITIAL_FORM_STATE = {
 
 export const Properties: React.FC = () => {
   const [properties, setProperties] = useState<Property[]>(MOCK_PROPERTIES);
-  const [filter, setFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // Filtering State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterType, setFilterType] = useState<string>('All');
+  const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+  const [minBeds, setMinBeds] = useState('');
+  const [minBaths, setMinBaths] = useState('');
+
   // State to track if we are editing an existing property
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -94,10 +117,38 @@ export const Properties: React.FC = () => {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredProperties = properties.filter(p => 
-    p.title.toLowerCase().includes(filter.toLowerCase()) || 
-    p.address.toLowerCase().includes(filter.toLowerCase())
-  );
+  // Filter Logic
+  const filteredProperties = properties.filter(p => {
+    // 1. Search Query
+    const matchesSearch = 
+      p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      p.address.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // 2. Property Type
+    const matchesType = filterType === 'All' || p.type === filterType;
+
+    // 3. Property Status
+    const matchesStatus = filterStatus === 'All' || p.status === filterStatus;
+
+    // 4. Price Range
+    const matchesMinPrice = !priceRange.min || p.price >= Number(priceRange.min);
+    const matchesMaxPrice = !priceRange.max || p.price <= Number(priceRange.max);
+
+    // 5. Beds & Baths
+    const matchesBeds = !minBeds || p.beds >= Number(minBeds);
+    const matchesBaths = !minBaths || p.baths >= Number(minBaths);
+
+    return matchesSearch && matchesType && matchesStatus && matchesMinPrice && matchesMaxPrice && matchesBeds && matchesBaths;
+  });
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setFilterType('All');
+    setFilterStatus('All');
+    setPriceRange({ min: '', max: '' });
+    setMinBeds('');
+    setMinBaths('');
+  };
 
   const handleAiGenerate = async () => {
     if (!formData.title || !formData.specs) return;
@@ -128,6 +179,7 @@ export const Properties: React.FC = () => {
       baths: property.baths.toString(),
       sqft: property.sqft.toString(),
       status: property.status,
+      type: property.type,
       specs: '', // Reset AI helpers
       vibe: '',
       description: property.description || '',
@@ -171,6 +223,7 @@ export const Properties: React.FC = () => {
             baths: Number(formData.baths),
             sqft: Number(formData.sqft),
             status: formData.status,
+            type: formData.type,
             description: formData.description,
             image: propertyImage
           };
@@ -185,10 +238,10 @@ export const Properties: React.FC = () => {
         address: formData.address,
         price: Number(formData.price),
         image: propertyImage,
-        beds: Number(formData.beds) || 3,
-        baths: Number(formData.baths) || 2,
-        sqft: Number(formData.sqft) || 1500,
-        type: PropertyType.House, // Defaulting type for simplicity
+        beds: Number(formData.beds) || 0,
+        baths: Number(formData.baths) || 0,
+        sqft: Number(formData.sqft) || 0,
+        type: formData.type,
         status: formData.status,
         description: formData.description
       };
@@ -209,35 +262,131 @@ export const Properties: React.FC = () => {
   return (
     <div>
       {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-          <Input 
-            placeholder="Search properties..." 
-            className="pl-10" 
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          />
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex gap-3 w-full sm:w-auto flex-1 max-w-2xl">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              <Input 
+                placeholder="Search properties by title or address..." 
+                className="pl-10" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Button 
+              variant={showFilters ? 'primary' : 'secondary'} 
+              onClick={() => setShowFilters(!showFilters)}
+              icon={<Filter size={18} />}
+              className="shrink-0"
+            >
+              Filters
+            </Button>
+            {/* Show reset button if any filter is active */}
+            {(searchQuery || filterType !== 'All' || filterStatus !== 'All' || priceRange.min || priceRange.max || minBeds || minBaths) && (
+              <Button variant="ghost" onClick={resetFilters} className="shrink-0 text-slate-500" title="Reset Filters">
+                <RotateCcw size={18} />
+              </Button>
+            )}
+          </div>
+          <Button onClick={openAddModal} icon={<Plus size={18} />} className="shrink-0">
+            Add Property
+          </Button>
         </div>
-        <Button onClick={openAddModal} icon={<Plus size={18} />}>
-          Add Property
-        </Button>
+
+        {/* Advanced Filters Panel */}
+        {showFilters && (
+          <Card className="animate-in slide-in-from-top-2 duration-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <Select 
+                label="Property Type"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                options={[
+                  { label: 'All Types', value: 'All' },
+                  { label: 'House', value: PropertyType.House },
+                  { label: 'Apartment', value: PropertyType.Apartment },
+                  { label: 'Commercial', value: PropertyType.Commercial },
+                  { label: 'Land', value: PropertyType.Land },
+                ]}
+              />
+              <Select 
+                label="Property Status"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                options={[
+                  { label: 'All Statuses', value: 'All' },
+                  { label: 'Active', value: PropertyStatus.Active },
+                  { label: 'Sold', value: PropertyStatus.Sold },
+                  { label: 'Draft', value: PropertyStatus.Draft },
+                ]}
+              />
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Price Range</label>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="number" 
+                    placeholder="Min" 
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-accent"
+                    value={priceRange.min}
+                    onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                  />
+                  <span className="text-slate-400">-</span>
+                  <input 
+                    type="number" 
+                    placeholder="Max" 
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-accent"
+                    value={priceRange.max}
+                    onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Input 
+                  label="Min Beds" 
+                  type="number" 
+                  placeholder="Any" 
+                  value={minBeds}
+                  onChange={(e) => setMinBeds(e.target.value)}
+                />
+                <Input 
+                  label="Min Baths" 
+                  type="number" 
+                  placeholder="Any" 
+                  value={minBaths}
+                  onChange={(e) => setMinBaths(e.target.value)}
+                />
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredProperties.map(property => (
-          <PropertyCard 
-            key={property.id} 
-            property={property} 
-            onClick={() => openEditModal(property)}
-            onDelete={(e) => {
-              e.stopPropagation();
-              setDeleteId(property.id);
-            }}
-          />
-        ))}
-      </div>
+      {filteredProperties.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredProperties.map(property => (
+            <PropertyCard 
+              key={property.id} 
+              property={property} 
+              onClick={() => openEditModal(property)}
+              onDelete={(e) => {
+                e.stopPropagation();
+                setDeleteId(property.id);
+              }}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-20">
+          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+            <Search size={32} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">No properties found</h3>
+          <p className="text-slate-500 dark:text-slate-400">Try adjusting your filters or search query.</p>
+          <Button variant="ghost" onClick={resetFilters} className="mt-4 text-accent">Clear all filters</Button>
+        </div>
+      )}
 
       {/* Add/Edit Property Modal */}
       {isModalOpen && (
@@ -367,6 +516,17 @@ export const Properties: React.FC = () => {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <Select 
+                   label="Type"
+                   value={formData.type}
+                   onChange={e => setFormData({...formData, type: e.target.value as PropertyType})}
+                   options={[
+                     { label: 'House', value: PropertyType.House },
+                     { label: 'Apartment', value: PropertyType.Apartment },
+                     { label: 'Commercial', value: PropertyType.Commercial },
+                     { label: 'Land', value: PropertyType.Land },
+                   ]}
+                 />
                  <Select 
                    label="Status"
                    value={formData.status}

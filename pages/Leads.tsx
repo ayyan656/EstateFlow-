@@ -1,25 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Lead, LeadStatus } from '../types';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { Input, Textarea, Select } from '../components/ui/Input';
-import { Phone, Mail, MoreHorizontal, Plus, X, User, DollarSign, Calendar, MapPin, MessageSquare, Filter, ShieldCheck, Edit2, Save } from 'lucide-react';
+import { Input, Textarea } from '../components/ui/Input';
+import { Phone, Mail, MoreHorizontal, Plus, X, User, DollarSign, Calendar, MapPin, MessageSquare, Filter, ShieldCheck, Edit2, Save, UserPlus, ChevronDown } from 'lucide-react';
 import { useLeads } from '../context/LeadsContext';
 
 const COLUMNS = [
-  { id: LeadStatus.New, label: 'New Leads', color: 'border-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-  { id: LeadStatus.Contacted, label: 'Contacted', color: 'border-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20' },
-  { id: LeadStatus.Viewing, label: 'Viewing', color: 'border-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
-  { id: LeadStatus.Negotiation, label: 'Negotiation', color: 'border-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
-  { id: LeadStatus.Closed, label: 'Closed', color: 'border-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
+  { id: LeadStatus.New, label: 'New Leads', color: 'border-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20', dot: 'bg-blue-500' },
+  { id: LeadStatus.Contacted, label: 'Contacted', color: 'border-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20', dot: 'bg-yellow-500' },
+  { id: LeadStatus.Viewing, label: 'Viewing', color: 'border-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20', dot: 'bg-purple-500' },
+  { id: LeadStatus.Negotiation, label: 'Negotiation', color: 'border-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20', dot: 'bg-orange-500' },
+  { id: LeadStatus.Closed, label: 'Closed', color: 'border-green-500', bg: 'bg-green-50 dark:bg-green-900/20', dot: 'bg-green-500' },
 ];
 
 const AGENTS = [
-  { id: '1', name: 'Sarah Miller', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=64&h=64&q=80' },
-  { id: '2', name: 'Mike Ross', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&h=64&q=80' },
-  { id: '3', name: 'Jessica Pearson', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=64&h=64&q=80' },
-  { id: '4', name: 'Harvey Specter', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=64&h=64&q=80' },
+  { id: '1', name: 'Sarah Miller', role: 'Senior Agent', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=64&h=64&q=80' },
+  { id: '2', name: 'Mike Ross', role: 'Sales Associate', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=64&h=64&q=80' },
+  { id: '3', name: 'Jessica Pearson', role: 'Broker', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=64&h=64&q=80' },
+  { id: '4', name: 'Harvey Specter', role: 'Partner', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=64&h=64&q=80' },
 ];
 
 export const Leads: React.FC = () => {
@@ -114,6 +114,27 @@ export const Leads: React.FC = () => {
 
   const KanbanCard: React.FC<{ lead: Lead }> = ({ lead }) => {
     const assignedAgent = AGENTS.find(a => a.name === lead.assignedTo);
+    const [showAgentMenu, setShowAgentMenu] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setShowAgentMenu(false);
+            }
+        };
+        if (showAgentMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showAgentMenu]);
+
+    const handleAssign = (agentName: string) => {
+        updateLead(lead.id, { assignedTo: agentName });
+        setShowAgentMenu(false);
+    };
 
     return (
       <div 
@@ -129,11 +150,11 @@ export const Leads: React.FC = () => {
                 src={lead.avatar} 
                 alt={lead.name}
                 draggable={false}
-                className="w-8 h-8 rounded-full object-cover ring-2 ring-transparent group-hover:ring-accent transition-all"
+                className="w-8 h-8 rounded-full object-cover ring-2 ring-transparent group-hover:ring-accent transition-all cursor-pointer hover:opacity-80"
               />
             ) : (
               <div 
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-300 text-xs font-bold ring-2 ring-transparent group-hover:ring-accent transition-all"
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-300 text-xs font-bold ring-2 ring-transparent group-hover:ring-accent transition-all cursor-pointer hover:opacity-80"
               >
                 {lead.name.charAt(0)}
               </div>
@@ -177,26 +198,65 @@ export const Leads: React.FC = () => {
             </button>
           </div>
           
-          <div className="flex items-center gap-2">
-            {lead.assignedTo && (
-              <div className="relative group/avatar" title={`Assigned to ${lead.assignedTo}`}>
-                {assignedAgent ? (
-                  <img src={assignedAgent.avatar} alt={lead.assignedTo} className="w-6 h-6 rounded-full object-cover ring-2 ring-white dark:ring-slate-800" />
+          <div className="flex items-center gap-2 relative" ref={menuRef}>
+            {/* Agent Avatar / Assign Button */}
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAgentMenu(!showAgentMenu);
+                }}
+                className="relative group/avatar focus:outline-none"
+                title={lead.assignedTo ? `Assigned to ${lead.assignedTo}` : "Assign Agent"}
+            >
+                {lead.assignedTo ? (
+                    assignedAgent ? (
+                        <img src={assignedAgent.avatar} alt={lead.assignedTo} className="w-6 h-6 rounded-full object-cover ring-2 ring-white dark:ring-slate-800 hover:ring-accent transition-all" />
+                    ) : (
+                        <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500 ring-2 ring-white dark:ring-slate-800 hover:ring-accent transition-all">
+                            {lead.assignedTo.charAt(0)}
+                        </div>
+                    )
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500 ring-2 ring-white dark:ring-slate-800">
-                    {lead.assignedTo.charAt(0)}
-                  </div>
+                    <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-400 hover:text-accent hover:border-accent transition-all">
+                        <UserPlus size={12} />
+                    </div>
                 )}
-              </div>
+            </button>
+
+            {/* Dropdown Menu */}
+            {showAgentMenu && (
+                <div className="absolute bottom-full right-0 mb-2 w-48 bg-white dark:bg-slate-900 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="px-3 py-2 border-b border-gray-100 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        Assign to
+                    </div>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleAssign(''); }}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+                    >
+                        Unassigned
+                    </button>
+                    {AGENTS.map(agent => (
+                        <button
+                            key={agent.id}
+                            onClick={(e) => { e.stopPropagation(); handleAssign(agent.name); }}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                        >
+                             <img src={agent.avatar} alt={agent.name} className="w-5 h-5 rounded-full object-cover" />
+                             <span className="text-slate-700 dark:text-slate-200">{agent.name}</span>
+                        </button>
+                    ))}
+                </div>
             )}
-             {lead.status !== LeadStatus.Closed && (
+
+            {/* Next Stage Button */}
+            {lead.status !== LeadStatus.Closed && (
                <button 
                   onClick={(e) => {
                     e.stopPropagation();
                     const currentIndex = COLUMNS.findIndex(c => c.id === lead.status);
                     if(currentIndex < COLUMNS.length - 1) moveLead(e, lead.id, COLUMNS[currentIndex + 1].id as LeadStatus);
                   }}
-                  className="text-[10px] font-bold text-accent hover:underline px-2 py-1 rounded hover:bg-accent/5"
+                  className="text-[10px] font-bold text-accent hover:underline px-2 py-1 rounded hover:bg-accent/5 ml-1"
                >
                  Next &rarr;
                </button>
@@ -220,6 +280,24 @@ export const Leads: React.FC = () => {
       status: lead.status
     });
 
+    const [isAgentOpen, setIsAgentOpen] = useState(false);
+    const [isStageOpen, setIsStageOpen] = useState(false);
+    const assignmentRef = useRef<HTMLDivElement>(null);
+    const stageRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (assignmentRef.current && !assignmentRef.current.contains(event.target as Node)) {
+                setIsAgentOpen(false);
+            }
+            if (stageRef.current && !stageRef.current.contains(event.target as Node)) {
+                setIsStageOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     useEffect(() => {
       setFormData({
         name: lead.name,
@@ -241,13 +319,8 @@ export const Leads: React.FC = () => {
       setIsEditing(false);
     };
 
-    const handleAssignChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const newVal = e.target.value;
-      setFormData(prev => ({ ...prev, assignedTo: newVal }));
-      if (!isEditing) {
-        updateLead(lead.id, { assignedTo: newVal });
-      }
-    };
+    const assignedAgent = AGENTS.find(a => a.name === formData.assignedTo);
+    const currentColumn = COLUMNS.find(c => c.id === formData.status) || COLUMNS[0];
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
@@ -350,36 +423,107 @@ export const Leads: React.FC = () => {
                 <div className="lg:col-span-1 space-y-6">
                   
                   {/* System / Assignment Card */}
-                  <Card className="bg-slate-50 dark:bg-slate-800/50 border-gray-100 dark:border-slate-700">
+                  <Card className="bg-slate-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-800 overflow-visible">
                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                        <ShieldCheck size={14} /> Assignment
                      </h3>
-                     <div className="space-y-4">
-                        <div>
+                     <div className="space-y-5">
+                        {/* Custom Agent Selector */}
+                        <div className="relative" ref={assignmentRef}>
                            <label className="text-xs text-slate-500 block mb-1.5">Assigned Agent</label>
-                           <Select 
-                             value={formData.assignedTo}
-                             onChange={handleAssignChange}
-                             options={[
-                               { label: 'Unassigned', value: '' },
-                               ...AGENTS.map(agent => ({ label: agent.name, value: agent.name }))
-                             ]}
-                             className="bg-white dark:bg-slate-900"
-                           />
+                           <button
+                             onClick={() => setIsAgentOpen(!isAgentOpen)}
+                             className="w-full flex items-center justify-between p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl hover:border-accent dark:hover:border-accent transition-colors shadow-sm text-left group"
+                           >
+                             <div className="flex items-center gap-3">
+                               {assignedAgent ? (
+                                 <img src={assignedAgent.avatar} alt={assignedAgent.name} className="w-8 h-8 rounded-full object-cover" />
+                               ) : (
+                                 <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400">
+                                   <User size={16} />
+                                 </div>
+                               )}
+                               <div>
+                                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                   {assignedAgent ? assignedAgent.name : "Unassigned"}
+                                 </p>
+                                 <p className="text-xs text-slate-500 dark:text-slate-400">
+                                   {assignedAgent ? assignedAgent.role : "Select an agent"}
+                                 </p>
+                               </div>
+                             </div>
+                             <ChevronDown size={16} className={`text-slate-400 transition-transform ${isAgentOpen ? 'rotate-180' : ''}`} />
+                           </button>
+
+                           {isAgentOpen && (
+                             <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                               <button
+                                 onClick={() => {
+                                   setFormData(prev => ({ ...prev, assignedTo: '' }));
+                                   if(!isEditing) updateLead(lead.id, { assignedTo: '' });
+                                   setIsAgentOpen(false);
+                                 }}
+                                 className="w-full text-left px-4 py-3 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors border-b border-gray-50 dark:border-slate-700/50"
+                               >
+                                 Unassigned
+                               </button>
+                               {AGENTS.map(agent => (
+                                 <button
+                                   key={agent.id}
+                                   onClick={() => {
+                                      setFormData(prev => ({ ...prev, assignedTo: agent.name }));
+                                      if(!isEditing) updateLead(lead.id, { assignedTo: agent.name });
+                                      setIsAgentOpen(false);
+                                   }}
+                                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors"
+                                 >
+                                   <img src={agent.avatar} alt={agent.name} className="w-8 h-8 rounded-full object-cover" />
+                                   <div className="text-left">
+                                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{agent.name}</p>
+                                      <p className="text-xs text-slate-500">{agent.role}</p>
+                                   </div>
+                                 </button>
+                               ))}
+                             </div>
+                           )}
                         </div>
-                        <div>
+
+                        {/* Custom Stage Selector */}
+                        <div className="relative" ref={stageRef}>
                            <label className="text-xs text-slate-500 block mb-1.5">Lead Stage</label>
-                           <Select 
-                             value={formData.status}
-                             onChange={(e) => {
-                               const newStatus = e.target.value as LeadStatus;
-                               setFormData(prev => ({ ...prev, status: newStatus }));
-                               if(!isEditing) updateLeadStatus(lead.id, newStatus);
-                             }}
-                             options={COLUMNS.map(c => ({ label: c.label, value: c.id }))}
-                             className="bg-white dark:bg-slate-900"
+                           <button
+                             onClick={() => !isEditing && setIsStageOpen(!isStageOpen)}
                              disabled={isEditing}
-                           />
+                             className={`w-full flex items-center justify-between p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl transition-colors shadow-sm text-left ${isEditing ? 'opacity-70 cursor-not-allowed' : 'hover:border-accent dark:hover:border-accent'}`}
+                           >
+                              <div className="flex items-center gap-3">
+                                 <div className={`w-3 h-3 rounded-full ${currentColumn.dot}`}></div>
+                                 <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                   {currentColumn.label}
+                                 </span>
+                              </div>
+                              {!isEditing && <ChevronDown size={16} className={`text-slate-400 transition-transform ${isStageOpen ? 'rotate-180' : ''}`} />}
+                           </button>
+
+                           {isStageOpen && (
+                             <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                                {COLUMNS.map(col => (
+                                   <button
+                                     key={col.id}
+                                     onClick={() => {
+                                        const newStatus = col.id as LeadStatus;
+                                        setFormData(prev => ({ ...prev, status: newStatus }));
+                                        updateLeadStatus(lead.id, newStatus);
+                                        setIsStageOpen(false);
+                                     }}
+                                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                                   >
+                                      <div className={`w-3 h-3 rounded-full ${col.dot}`}></div>
+                                      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{col.label}</span>
+                                   </button>
+                                ))}
+                             </div>
+                           )}
                         </div>
                      </div>
                   </Card>
